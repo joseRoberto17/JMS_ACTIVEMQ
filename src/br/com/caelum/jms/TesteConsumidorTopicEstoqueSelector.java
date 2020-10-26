@@ -8,15 +8,15 @@ import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
-import javax.jms.MessageProducer;
 import javax.jms.Message;
 import javax.jms.Session;
 import javax.jms.TextMessage;
+import javax.jms.Topic;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 
-public class TesteProdutorTopico {
+public class TesteConsumidorTopicEstoqueSelector {
 
 	@SuppressWarnings("resource")
 	public static void main(String[] args) throws Exception {
@@ -26,27 +26,37 @@ public class TesteProdutorTopico {
 		//lookup eu pego o jndi
 		ConnectionFactory factory = (ConnectionFactory) context.lookup("ConnectionFactory");
 		Connection connection = factory.createConnection();
-		
+		connection.setClientID("estoque");
 		connection.start();
 		
 		Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 		
 		
-		Destination topico = (Destination) context.lookup("loja");
+		Topic topico = (Topic) context.lookup("loja");
 		
-		MessageProducer producer = session.createProducer(topico);
+		MessageConsumer consumer =  session.createDurableSubscriber(topico, "assinatura-selector", "ebook is null or ebook=false", false);
+		// Fim
+		// Uma mensagem Message message = (Message) consumer.receive();
 		
-		for(int i = 0; i < 2; i++) {
-			Message msg = session.createTextMessage("<pedido><id>" + i + "</id><ebook>false</false></pedido>");
-			msg.setBooleanProperty("ebook", false);
-			producer.send(msg);
-		}
+		consumer.setMessageListener(new MessageListener() {
+
+			@Override
+			public void onMessage(Message message) {
+				
+				TextMessage txtMessage = (TextMessage) message;
+				try {
+					System.out.println(txtMessage.getText());
+				} catch (JMSException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			}
+   
+			
+		});
 		
-//		Message msg = session.createTextMessage("<pedido><id>1</id></pedido>");
-//		producer.send(msg);
-		
-		
-		//new Scanner(System.in).nextLine();
+		new Scanner(System.in).nextLine();
 		
 		session.close();
 		connection.close();
