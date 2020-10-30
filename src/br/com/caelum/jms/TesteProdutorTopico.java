@@ -1,56 +1,55 @@
 package br.com.caelum.jms;
 
-import java.util.Scanner;
+import java.io.StringWriter;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
-import javax.jms.JMSException;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageListener;
-import javax.jms.MessageProducer;
 import javax.jms.Message;
+import javax.jms.MessageProducer;
 import javax.jms.Session;
-import javax.jms.TextMessage;
 import javax.naming.InitialContext;
-import javax.naming.NamingException;
+import javax.xml.bind.JAXB;
 
+import org.apache.activemq.ActiveMQConnectionFactory;
+
+import br.com.caelum.modelo.Pedido;
+import br.com.caelum.modelo.PedidoFactory;
 
 public class TesteProdutorTopico {
 
 	@SuppressWarnings("resource")
 	public static void main(String[] args) throws Exception {
-		//Inicializando
+
 		InitialContext context = new InitialContext();
+//		ConnectionFactory factory = (ConnectionFactory) context.lookup("ConnectionFactory");
 		
-		//lookup eu pego o jndi
-		ConnectionFactory factory = (ConnectionFactory) context.lookup("ConnectionFactory");
+		// Resolve o erro This class is not trusted to be serialized as ObjectMessage payload. 
+		ActiveMQConnectionFactory factory = (ActiveMQConnectionFactory) context.lookup("ConnectionFactory");
+		factory.setTrustAllPackages(true);
+
 		Connection connection = factory.createConnection();
-		
 		connection.start();
-		
 		Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-		
-		
+
 		Destination topico = (Destination) context.lookup("loja");
-		
+
 		MessageProducer producer = session.createProducer(topico);
 		
-		for(int i = 0; i < 2; i++) {
-			Message msg = session.createTextMessage("<pedido><id>" + i + "</id><ebook>false</false></pedido>");
-			msg.setBooleanProperty("ebook", false);
-			producer.send(msg);
-		}
+		Pedido pedido = new PedidoFactory().geraPedidoComValores();
 		
-//		Message msg = session.createTextMessage("<pedido><id>1</id></pedido>");
-//		producer.send(msg);
-		
-		
-		//new Scanner(System.in).nextLine();
-		
+		//salvar na memória
+//		StringWriter writer = new StringWriter()
+//		JAXB.marshal(pedido, writer);
+//		String xml = writer.toString();
+
+//		Message message = session.createObjectMessage(xml);
+		Message message = session.createObjectMessage(pedido);
+		//message.setBooleanProperty("ebook", true);
+		producer.send(message);
+
 		session.close();
 		connection.close();
 		context.close();
 	}
-
 }
